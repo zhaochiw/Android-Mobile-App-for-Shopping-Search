@@ -1,0 +1,563 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset="utf-8">
+<title>Homework 8</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.13.1/jquery.validate.min.js"></script>
+<script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.13.1/additional-methods.min.js"></script>
+<style type="text/css">
+    .cmxform label.error{
+        color: #d9534f;
+        font-weight: bold;
+        padding-left: 0;
+    }
+    .cmxform input.error{
+        border: 1px solid #d9534f;
+    }
+    .checkbox{
+        margin-top: 0px;
+    }
+    #eBayLogo{
+        vertical-align: middle;
+        width: 95px;
+        height: 40px;
+    }
+    #title{
+        vertical-align: middle;
+        font-size: 28px;
+    }
+    #itemPicture{
+        width: 60px;
+        height: 60px;
+    }
+    #modalPicture{
+        display: block;
+        margin: 0 auto;
+        width: 200px;
+        height: 380px;
+    }
+    #handling{
+        padding-top: 6px;
+    }
+    #gou{
+        color: green;
+    }
+    #cross{
+        color: red;
+    }
+    h5{
+        margin-top: 0px;
+        font-weight: bold;
+    }
+    @media(min-width: 450px){
+        #itemPicture{
+            width: 90px;
+            height: 90px
+        }
+    }
+    @media(min-width: 600px){
+        #itemPicture{
+            width: 120px;
+            height: 120px
+        }
+        #modalPicture{
+            width: 550px;
+            height: 750px;
+        }
+    }
+    @media(min-width: 992px){
+        #optionName{
+            text-align: right;
+        }
+        #button{
+            text-align: right;
+        }
+        #titleLine{
+            position: relative;
+            left: 60px;
+        }
+        #modalPicture{
+            width: 400px;
+            height: 500px;
+        }
+        h4{
+            font-size: 28px;
+        }
+        h5{
+            font-size: 20px;
+        }
+        p{
+            font-size: 20px;
+        }
+    }
+    @media(min-width: 1200px){
+        #titleLine{
+            position: relative;
+            left: 110px;
+        }
+        #itemPicture{
+            width: 150px;
+            height: 150px
+        }
+    }
+</style>
+<script>
+function Clear(){
+    var len = document.forms["searchForm"].length;
+    for(var i = 0; i < len-2; ++i){
+        var item = document.forms["searchForm"][i];
+        var itemType = item.type;
+        switch(itemType){
+            case "checkbox":
+                item.checked = false;
+                break;
+            case "select-one":
+                if(item.name == "sortOrder"){
+                    item.value = "BestMatch";
+                }
+                else{item.value = 5;}
+                break;
+            default: item.value = "";
+        }
+    }
+    document.getElementById("result").innerHTML = "";
+}
+function Search(){
+    if($("#searchForm").valid()){
+        $.ajax({
+            url: "readXML.php",
+            data: $("#searchForm").serialize(),
+            type: 'GET',
+            success: function(result){
+                resultDisPlay(result);
+            },
+            error: function(){
+                $("#result").html("error");
+            }
+        });
+    }
+}
+function fbShare(fbname, picURL, fblink, fbdes){
+    FB.ui({
+        method: 'feed',
+        link: fblink,
+        name: fbname,
+        caption: 'Search Infomation from eBay.com',
+        display: 'popup',
+        picture: picURL,
+        description: fbdes
+    }, function(response) {
+        if (response && !response.error_code) {
+            alert('Posted Successfully');
+        } else {
+            alert('Not Posted');
+        }
+    });
+}   
+function resultDisPlay(json){
+    var result = JSON.parse(json);
+    var ack = result.ack;
+    if(ack == "No results found"){
+        document.getElementById("result").innerHTML = '<h4>No results found</h4>';
+    }
+    else{
+        document.getElementById("result").innerHTML = "";
+        var pageNumber = result.pageNumber;
+        var itemPerPage = result.itemCount;
+        var rangeH = pageNumber * itemPerPage;
+        var rangeL = rangeH - itemPerPage + 1;
+        if(rangeH > result.resultCount){
+            rangeH = result.resultCount;
+        }
+        var resultHead = document.createElement('div');
+        resultHead.id = 'resultHead';
+        resultHead.innerHTML = '<h4>'+ rangeL +'-'+ rangeH +' items out of '+ result.resultCount +'</h4>';
+        document.getElementById("result").appendChild(resultHead);
+        var remain = result.resultCount - itemPerPage * (pageNumber - 1);
+        if(Number(itemPerPage) > Number(remain)){
+            len = remain;
+        }
+        else{
+            len = itemPerPage;
+        }
+        for(var i = 0; i < len; ++i){
+            var itemName = "item"+i.toString();
+            var itemInfoId = "itemInfo"+i.toString();
+            var itemInfo = document.createElement('div');
+            itemInfo.id = itemInfoId;
+            itemInfo.className = 'row form-group';
+            document.getElementById("result").appendChild(itemInfo);
+            var gallery = document.createElement('div');
+            gallery.id = 'gallery';
+            gallery.className = 'col-xs-3 col-md-2';
+            var myModalId = "myModal"+i.toString();
+            var galleryDisplay = '<a data-toggle="modal" href="#'+myModalId+'">';
+            var picId = "pic"+i.toString();
+            galleryDisplay += '<img id="itemPicture" src='+ result[itemName].basicInfo.galleryURL +' alt="Logo"></a>';
+            galleryDisplay += '<div class="modal fade" id="'+myModalId+'" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button><h5 class="modal-title" id="myModalLabel">'+result[itemName].basicInfo.title+'</h5></div><div class="modal-body media-body"><img id="modalPicture" src='+ result[itemName].basicInfo.galleryURL +' alt="itemPicture"></a></div></div></div></div>';
+            gallery.innerHTML = galleryDisplay;
+            itemInfo.appendChild(gallery);
+            var itemSummary = document.createElement('div');
+            var itemSummaryId = "itemSummary"+i.toString();
+            itemSummary.id = itemSummaryId;
+            itemSummary.className = 'col-xs-9 col-md-10';
+            var summary = '<a href='+ result[itemName].basicInfo.viewItemURL +'><h5>'+ result[itemName].basicInfo.title+'</h5></a>';
+            var shippingServiceCost = "(FREE Shipping)";
+            if(result[itemName].basicInfo.shippingServiceCost > 0){
+                shippingServiceCost = "(+ $"+ result[itemName].basicInfo.shippingServiceCost +" for shipping)";
+            }
+            summary += '<p><b>Price: $'+ result[itemName].basicInfo.convertedCurrentPrice +'</b>'+shippingServiceCost;
+            summary += '&nbsp&nbsp&nbsp<i>Location: '+ result[itemName].basicInfo.location +'</i>';
+            if(result[itemName].basicInfo.topRatedListing == "true"){
+                summary += '&nbsp&nbsp&nbsp<img src="http://cs-server.usc.edu:45678/hw/hw8/itemTopRated.jpg" alt="topRated" width="40px" height="30px">'; 
+            }
+            var collapseInfo = document.createElement('div');
+            var collapseInfoId = "collapseInfo"+i.toString();
+            summary += '&nbsp&nbsp&nbsp<a data-toggle="collapse" href="#'+collapseInfoId+'" aria-expanded="false" aria-controls="'+collapseInfoId+'">View Details</a>';
+            //facebook share
+            var fbname = result[itemName].basicInfo.title;
+            var fblink = result[itemName].basicInfo.viewItemURL;
+            var picURL = result[itemName].basicInfo.galleryURL;
+            var fbdes = "Price: $"+ result[itemName].basicInfo.convertedCurrentPrice + shippingServiceCost +", Location:"+ result[itemName].basicInfo.location;
+            summary += '&nbsp&nbsp&nbsp<img id="fbshare" src="http://cs-server.usc.edu:45678/hw/hw8/fb.png" alt="fbLogo" width="20px" height="20px" onclick="fbShare(\''+fbname+'\',\''+picURL+'\',\''+fblink+'\',\''+fbdes+'\')">';
+            itemSummary.innerHTML = summary;
+            itemInfo.appendChild(itemSummary);
+            var viewInfo = document.createElement('div');
+            var viewInfoId = "viewInfo"+i.toString();
+            viewInfo.id = viewInfoId;
+            viewInfo.className = 'row viewDetail';
+            itemSummary.appendChild(viewInfo);
+            var details = document.createElement('div');
+            var detailsId = "details"+i.toString();
+            details.id = detailsId;
+            details.className = 'col-xs-9 col-md-10';
+            viewInfo.appendChild(details); 
+            //collapse for "view details"
+            collapseInfo.id = collapseInfoId;
+            collapseInfo.className = 'collapse';
+            details.appendChild(collapseInfo);
+            var tabpanel = document.createElement('div');
+            var tabpanelId = "tabpanel"+i.toString();
+            tabpanel.id = tabpanelId;
+            collapseInfo.appendChild(tabpanel);
+            var basicInfoId = "basicInfo"+i.toString();
+            var sellerInfoId = "sellerInfo"+i.toString();
+            var shipInfoId = "shipInfo"+i.toString();
+            var tabs = '<ul class="nav nav-tabs" role="tablist"><li role="presentation" class="active"><a href="#'+basicInfoId+'" aria-controls="'+basicInfoId+'" role="tab" data-toggle="tab">Basic Info</a></li><li role="presentation"><a href="#'+sellerInfoId+'" aria-controls="'+sellerInfoId+'" role="tab" data-toggle="tab">Seller Info</a></li><li role="presentation"><a href="#'+shipInfoId+'" aria-controls="'+shipInfoId+'" role="tab" data-toggle="tab">Shipping Info</a></li></ul>';
+            tabpanel.innerHTML = tabs;
+            var tabContent = document.createElement('div');
+            var tabContentId = "tabContent"+i.toString();
+            tabContent.id = tabContentId;
+            tabContent.className = 'tab-content';
+            tabpanel.appendChild(tabContent);
+            var basicInfo = document.createElement('div');
+            basicInfo.id = basicInfoId;
+            basicInfo.className = 'tab-pane active';
+            tabContent.appendChild(basicInfo);
+            var basicContent = '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Category name</label></div><div class="col-xs-12 col-md-9">'+result[itemName].basicInfo.categoryName+'</div></div>';
+            basicContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Condition</label></div><div class="col-xs-12 col-md-9">'+result[itemName].basicInfo.conditionDisplayName+'</div></div>';
+            basicContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Buying format</label></div><div class="col-xs-12 col-md-9">'+result[itemName].basicInfo.listingType+'</div></div>';
+            basicInfo.innerHTML = basicContent;
+            var sellerInfo = document.createElement('div');
+            sellerInfo.id = sellerInfoId;
+            sellerInfo.className = 'tab-pane';
+            tabContent.appendChild(sellerInfo);
+            var sellerContent = '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>User name</label></div><div class="col-xs-12 col-md-9">'+result[itemName].sellerInfo.sellerUserName+'</div></div>';
+            sellerContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Feedback score</label></div><div class="col-xs-12 col-md-9">'+result[itemName].sellerInfo.feedbackScore+'</div></div>';
+            sellerContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Positive feedback</label></div><div class="col-xs-12 col-md-9">'+result[itemName].sellerInfo.positiveFeedbackPercent+'</div></div>';
+            sellerContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Feedback rating</label></div><div class="col-xs-12 col-md-9">'+result[itemName].sellerInfo.feedbackRatingStar+'</div></div>';
+            sellerContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Top rated</label></div><div class="col-xs-12 col-md-9">';
+            if(result[itemName].sellerInfo.topRatedSeller == "true"){
+                sellerContent += '<span id="gou" class="glyphicon glyphicon-ok" aria-hidden="true"></span>';
+            }
+            else{
+                sellerContent += '<span id="cross" class="glyphicon glyphicon-remove" aria-hidden="true"></span>';
+            }
+            sellerContent += '</div></div>';
+            sellerContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Store</label></div><div class="col-xs-12 col-md-9">';
+            if(result[itemName].sellerInfo.sellerStoreName != ""){
+                sellerContent += '<a href='+ result[itemName].sellerInfo.sellerStoreURL +' target="_blank">'+ result[itemName].sellerInfo.sellerStoreName+'</a>';
+            }
+            else{
+                sellerContent += 'N/A';
+            }
+            sellerContent += '</div></div>';
+            sellerInfo.innerHTML = sellerContent;
+            var shipInfo = document.createElement('div');
+            shipInfo.id = shipInfoId;
+            shipInfo.className = 'tab-pane';
+            tabContent.appendChild(shipInfo);
+            var shipContent = '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Shipping type</label></div><div class="col-xs-12 col-md-9">'+result[itemName].shippingInfo.shippingType+'</div></div>';
+            shipContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Handling time</label></div><div class="col-xs-12 col-md-9">'+result[itemName].shippingInfo.handlingTime+'</div></div>';
+            shipContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Shipping locations</label></div><div class="col-xs-12 col-md-9">'+result[itemName].shippingInfo.shipToLocations+'</div></div>';
+            shipContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Expedited shipping</label></div><div class="col-xs-12 col-md-9">';
+            if(result[itemName].shippingInfo.expeditedShipping == "true"){
+                shipContent += '<span id="gou" class="glyphicon glyphicon-ok" aria-hidden="true"></span>';
+            }
+            else{
+                shipContent += '<span id="cross" class="glyphicon glyphicon-remove" aria-hidden="true"></span>';
+            }
+            shipContent += '</div></div>';
+            shipContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>One day shipping</label></div><div class="col-xs-12 col-md-9">';
+            if(result[itemName].shippingInfo.oneDayShippingAvailable == "true"){
+                shipContent += '<span id="gou" class="glyphicon glyphicon-ok" aria-hidden="true"></span>';
+            }
+            else{
+                shipContent += '<span id="cross" class="glyphicon glyphicon-remove" aria-hidden="true"></span>';
+            }
+            shipContent += '</div></div>';
+            shipContent += '<div class="row form-group"><div class="col-xs-12 col-md-3"><label>Returns accepted</label></div><div class="col-xs-12 col-md-9">';
+            if(result[itemName].shippingInfo.returnsAccepted == "true"){
+                shipContent += '<span id="gou" class="glyphicon glyphicon-ok" aria-hidden="true"></span>';
+            }
+            else{
+                shipContent += '<span id="cross" class="glyphicon glyphicon-remove" aria-hidden="true"></span>';
+            }
+            shipContent += '</div></div>';
+            shipInfo.innerHTML = shipContent;
+        }
+        Pagination(result);
+    }
+}
+function Pagination(result){
+    var pagination = document.createElement('nav');
+    pagination.id = 'paginationBar';
+    document.getElementById("result").appendChild(pagination);
+    var ul = document.createElement('ul');
+    ul.className = 'pagination';
+    ul.id = 'wholeBar';
+    pagination.appendChild(ul);
+    var pre = document.createElement('li');
+    pre.id = 'preBar';
+    if(result.pageNumber == 1){
+        pre.className = "disabled";        
+    }
+    var prePage = Number(result.pageNumber) - 1;
+    pre.innerHTML = '<a onclick="certainPage('+ prePage +')" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>';
+    ul.appendChild(pre);
+    var n = (Math.ceil(result.pageNumber / 5) - 1) * 5;
+    var maxPage = -1;
+    for(var i = 1; i < 6; ++i){
+        var pageNumber = document.createElement('li');
+        pageNumber.id = 'pageNumber';
+        var m = n + i;
+        if(m == result.pageNumber){
+            pageNumber.className = 'active';
+            pageNumber.innerHTML = '<a id="numOfPage" onclick="certainPage('+ m +')">'+ m +'</a>';
+        }
+        else{
+            pageNumber.innerHTML = '<a id="numOfPage" onclick="certainPage('+ m +')">'+ m +'<span class="sr-only">(current)</span></a>';    
+        }
+        ul.appendChild(pageNumber);
+        var itemMax = m * result.itemCount;
+        if(Number(itemMax) >= Number(result.resultCount)){
+            maxPage = m;
+            break;    
+        }
+    }
+    var pos = document.createElement('li');
+    pos.id = 'posBar';
+    if(result.pageNumber == maxPage){
+        pos.className = "disabled";    
+    }
+    var posPage = Number(result.pageNumber) + 1;
+    pos.innerHTML = '<a onclick="certainPage('+ posPage +')" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>';
+    ul.appendChild(pos);    
+}
+function certainPage(num){
+    if($("#searchForm").valid()){
+        $.ajax({
+            url: "readXML.php",
+            data: $("#searchForm").serialize()+"&page="+num,
+            type: 'GET',
+            success: function(result){
+                resultDisPlay(result);
+            },
+            error: function(){
+                $("#result").html("error");
+            }
+        });
+    }
+}
+$.validator.addMethod("greaterThan",function (value, element, param) {
+  var $min = $(param);
+  if (this.settings.onfocusout) {
+    $min.off(".validate-greaterThan").on("blur.validate-greaterThan", function () {
+      $(element).valid();
+    });
+  }
+  return this.optional(element) || Number(value) >= Number($min.val());
+}, "Maximum price cannot be less than minimum price or below 0");
+$(document).ready(function(){
+    $("#searchForm").validate({
+        rules:{
+            keywords:{
+                required: true
+            },
+            MinPrice:{
+                number: true,
+                min: 0
+            },
+            MaxPrice:{
+                number: true,
+                greaterThan: '#priceL'
+            },
+            MaxHandlingTime:{
+                digits: true,
+                min: 1
+            }
+        },
+        messages:{
+            keywords:{
+                required: "Please enter a key word"
+            },
+            MinPrice:{
+                number: "Price should be a valid number",
+                min: "Minimum price cannot be below 0"
+            },
+            MaxPrice:{
+                number: "Price should be a valid number"
+            },
+            MaxHandlingTime:{
+                digits: "Max handling time should be a valid digit",
+                min: "Max handling time should be greater than or equal to 1"
+            }
+        }
+    })
+});
+</script>
+<title>eBay Shopping</title>
+</head>
+<body>
+<div id="fb-root"></div>
+<script>
+window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '1467546916869018',
+      xfbml      : true,
+      version    : 'v2.3'
+    });
+};   
+(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.3&appId=1467546916869018";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));
+</script>
+<form role="form" class="cmxform" id="searchForm" name="searchForm" method="get" action="">
+    <div class="container">
+      <h1 id="titleLine">
+          <img id="eBayLogo" src="http://cs-server.usc.edu:45678/hw/hw8/ebay.jpg" alt="eBayLogo"/>
+          <span id="title">Shopping</span>
+      </h1>
+      <div class="row form-group">
+        <div class="col-xs-12 col-md-3" id="optionName"><label for="word">
+            Key words: <font color="#d9534f">*</font></label></div>
+        <div class="col-xs-12 col-md-9">
+            <input id="word" name="keywords" type="text"
+                   class="form-control" placeholder="Enter keyword">
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-xs-12 col-md-3" id="optionName">
+            <label for="price">Price range:</label></div>
+        <div class="col-xs-12 col-md-4">
+            <input id="priceL" name="MinPrice" type="text"
+                   class="form-control" placeholder="from($)">
+        </div>
+        <div class="col-xs-12 col-md-4 pull-right">
+            <input id="priceH" name="MaxPrice" type="text"
+                   class="form-control" placeholder="to($)">
+        </div>  
+      </div>
+      <div class="row form-group">
+        <div class="col-xs-12 col-md-3" id="optionName">
+            <label for="condition">Condition:</label></div>
+        <div class="col-xs-12 col-md-9 checkbox">
+            <label><input name="Condition[]" type="checkbox" value="1000">New</label>
+            <label><input name="Condition[]" type="checkbox" value="3000">Used</label>
+            <label><input name="Condition[]" type="checkbox" value="4000">Very Good</label>
+            <label><input name="Condition[]" type="checkbox" value="5000">Good</label>
+            <label><input name="Condition[]" type="checkbox" value="6000">Acceptable</label>
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-xs-12 col-md-3" id="optionName">
+            <label for="formats">Buying formats:</label></div>
+        <div class="col-xs-12 col-md-9 checkbox">
+            <label><input name="ListingType[]" type="checkbox" value="FixedPrice">Buy It Now</label>
+            <label><input name="ListingType[]" type="checkbox" value="Auction">Auction</label>
+            <label><input name="ListingType[]" type="checkbox" value="Classified">Classified Ads</label>
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-xs-12 col-md-3" id="optionName">
+            <label for="seller">Seller:</label></div>
+        <div class="col-xs-12 col-md-9 checkbox">
+            <label><input name="ReturnsAcceptedOnly" type="checkbox" value="true">Return accepted</label>
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-xs-12 col-md-3" id="optionName">
+            <label for="shipping">Shipping:</label></div>
+        <div class="col-xs-12 col-md-9 checkbox">
+            <label><input name="FreeShippingOnly" type="checkbox" value="true">Free Shipping</label>
+            <label><input name="ExpeditedShippingType" type="checkbox" value="true">Expedited Shipping</label>
+            <div class="row">
+                <div class="col-xs-12 col-md-12" id="handling">
+                    <input id="handling" name="MaxHandlingTime" type="text"
+                           class="form-control" placeholder="Max handling time(days)">
+                </div>
+            </div>
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-xs-12 col-md-3" id="optionName">
+            <label for="sort">Sort by:</label></div>
+        <div class="col-xs-12 col-md-9">
+            <select class="form-control" id="sort" name="sortOrder" style="width: 100%;">
+                <option value="BestMatch">Best Match</option>
+                <option value="CurrentPriceHighest">Price: highest first</option>
+                <option value="PricePlusShippingHighest">
+                    Price + Shipping: highest first
+                </option>
+                <option value="PricePlusShippingLowest">
+                    Price + Shipping: lowest first
+                </option>
+            </select>
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-xs-12 col-md-3" id="optionName">
+            <label for="page">Result per page:</label></div>
+        <div class="col-xs-12 col-md-9">
+            <select class="form-control" id="page"  style="width: 100%;"
+                    name="paginationInput.entriesPerPage">
+                <option value="5">5</option>
+                <option value="10">10</option>
+            </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-12 col-md-12 clearfix" id="button">
+            <button id="clear" type="submit" class="btn btn-default" onclick="Clear()">Clear</button>
+            <button id="search" type="button" class="btn btn-primary" onclick="Search()">Search</button>
+        </div>
+      </div>
+      <div class="row">
+          <div class="col-xs-12 col-md-12"><hr></div>
+      </div>
+    </div>
+</form>
+<div id="result" class="container"></div>
+</body></html> 
