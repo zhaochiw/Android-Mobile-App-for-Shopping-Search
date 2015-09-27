@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">EbaySearch</string>
+    <string name="action_settings">Settings</string>
+    <string name="title">eBay Search</string>
+    <string name="itemName1">Keyword</string>
+    <string name="itemName2">Price From</string>
+    <string name="itemName3">Price To</string>
+    <string name="itemName4">Sort By</string>
+    <string name="itemName5">CLEAR</string>
+    <string name="itemName6">SEARCH</string>
+    <string-array name="sort_list">
+        <item>Best Match</item>
+        <item>Price: highest first</item>
+        <item>Price + Shipping: highest first</item>
+        <item>Price + Shipping: lowest first</item>
+    </string-array>
+
+    <string name="title_activity_result_display">ResultActivity</string>
+    <string name="title_activity_details_display">DetailsActivity</string>
+
+    <string name="facebook_app_id">1386897691636052</string>
+
+</resources>
